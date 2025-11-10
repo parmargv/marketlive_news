@@ -99,8 +99,24 @@ def main():
     if choice=='Participant_data':
         participant_data.fetch_data()
 
-    if choice=="View_Particpant _Data":
-        participant_data.view_data()
+    if choice == "View_Particpant _Data":
+        option1 = st.selectbox('Select the Participant?', ('FII','PRO','CLIENT','DII','NET'))
+        if option1 == "FII":
+            ans = "FII"
+        elif option1 == "PRO":
+            ans = "PRO"
+        elif option1 == "CLIENT":
+            ans = "CLI"
+        elif option1 == "DII":
+            ans = "DII"
+        elif option1 == "NET":
+            ans = "NET"
+        else:
+            ans = "NO"
+
+        option2 = st.selectbox('Are you sure??', ('N','Y'))
+        if option2 == "Y":
+            participant_data.view_data(ans)
 
 
 if __name__ == "__main__":

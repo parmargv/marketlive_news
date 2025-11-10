@@ -1,8 +1,6 @@
 import os
 import pandas as pd
-import streamlit as st
 import openpyxl
-from datetime import datetime
 
 def save_pro(FII_DATA,PRO_DATA,DII_DATA,CLI_DATA,NET_DATA):
     absolute_path = os.path.dirname(__file__)

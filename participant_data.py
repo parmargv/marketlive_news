@@ -1,11 +1,12 @@
 import datetime
 import streamlit as st
 import urllib
+import supabase
 import save_pdata
-import pandas as pd
 import pytz
-import plotly.express as px
 import plotly.graph_objects as go
+from supabase import create_client, Client
+import pandas as pd
 def fetch_data():
     user_id = st.text_input('Enter userId:')
     user_pw = st.text_input('Enter password:')
@@ -60,31 +61,58 @@ def fetch_data():
                 PRO_CALL = df.iloc[3, 3]
                 PRO_PUT = df.iloc[4, 3]
                 PRO_NET = df.iloc[7, 3]
-                st.markdown(f'<h1 style="color:#319AA2 ;font-size:20px;">FII & PRO NET POSITION : {net_pos}</h1>',
-                            unsafe_allow_html=True)
+                st.markdown(f'<h1 style="color:#319AA2 ;font-size:20px;">FII & PRO NET POSITION : {net_pos}</h1>',unsafe_allow_html=True)
                 st.table(df)
                 col1 = ['client', 'DII', 'FII', 'PRO']
                 CALL = [CLIENT_CALL, DII_CALL, FII_CALL, PRO_CALL]
                 PUT = [CLIENT_PUT, DII_PUT, FII_PUT, PRO_PUT]
                 NET = [CLIENT_NET, DII_NET, FII_NET, PRO_NET]
-                # chart_data = pd.DataFrame(
-                #     {"Client_Type": col1, "CALL": CALL, "PUT": PUT,"NET":NET}
-                # )
-                #
-                # st.bar_chart(
-                #     chart_data, x="Client_Type", y=["CALL","PUT","NET"], color=["#008000","#00ff00", "#ff0000"],height=600,width=1500,use_container_width=False
-                # )
 
-                option1 = st.selectbox(
-                    'Save data?', ('NO', 'YES'))
+
+                option1 = st.selectbox('Save data?', ('NO', 'YES'))
                 if option1 == "YES":
-                    t2 = d.strftime("%d-%m-%Y")
-                    FII_DATA = [t2, FII_CALL, FII_PUT, FII_NET]
-                    PRO_DATA = [t2, PRO_CALL, PRO_PUT, PRO_NET]
-                    DII_DATA = [t2, DII_CALL, DII_PUT, DII_NET]
-                    CLI_DATA = [t2, CLIENT_CALL, CLIENT_PUT, CLIENT_NET]
-                    NET = [t2, FII_NET + PRO_NET]
-                    save_pdata.save_pro(FII_DATA, PRO_DATA, DII_DATA, CLI_DATA, NET)
+                    url = "https://cdxnmcpozkfdiqjsthqs.supabase.co"
+                    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkeG5tY3BvemtmZGlxanN0aHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzMTk1NzEsImV4cCI6MjA3Nzg5NTU3MX0.wQing-u7lKbYQgXeDvTsTzT5zXVv8Q5Jg1_91PdJxmo"
+                    supabase = create_client(url, key)
+                    t2 = d.strftime("%Y-%m-%d")
+                    FII_DATA ={
+                        "DATE": t2,
+                        "FII_CALL": FII_CALL,
+                        "FII_PUT": FII_PUT,
+                        "FII_NET": FII_NET
+                    }
+
+                    PRO_DATA = {
+                        "DATE": t2,
+                        "PRO_CALL": PRO_CALL,
+                        "PRO_PUT": PRO_PUT,
+                        "PRO_NET": PRO_NET
+                    }
+
+                    DII_DATA = {
+                        "DATE": t2,
+                        "DII_CALL": DII_CALL,
+                        "DII_PUT": DII_PUT,
+                        "DII_NET": DII_NET
+                    }
+                    CLI_DATA = {
+                        "DATE": t2,
+                        "CLI_CALL": CLIENT_CALL,
+                        "CLI_PUT": CLIENT_PUT,
+                        "CLI_NET": CLIENT_NET
+                    }
+                    NET_DATA = {
+                    "DATE": t2,
+                    "FII_NET": FII_NET,
+                    "PRO_NET": PRO_NET
+                    }
+
+                    response = supabase.table("fii_data").insert(FII_DATA).execute()
+                    response = supabase.table("dii_data").insert(DII_DATA).execute()
+                    response = supabase.table("pro_data").insert(PRO_DATA).execute()
+                    response = supabase.table("cli_data").insert(CLI_DATA).execute()
+                    response = supabase.table("net_data").insert(NET_DATA).execute()
+
                     st.write('Data saved.....')
                 else:
                     st.write('not saved')
@@ -95,33 +123,31 @@ def fetch_data():
                     st.write('Data cleared.....')
                 else:
                     st.write('Data not clear')
-def view_data():
-    #st.set_page_config(page_title="Option Data Dashboard", layout="wide")
+def get_data(indices):
+    url = "https://cdxnmcpozkfdiqjsthqs.supabase.co"
+    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkeG5tY3BvemtmZGlxanN0aHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzMTk1NzEsImV4cCI6MjA3Nzg5NTU3MX0.wQing-u7lKbYQgXeDvTsTzT5zXVv8Q5Jg1_91PdJxmo"
+    supabase = create_client(url, key)
+    if indices == "FII":
+        response = supabase.table("fii_data").select("*").execute()
+    elif indices == "PRO":
+        response = supabase.table("pro_data").select("*").execute()
+    elif indices == "DII":
+        response = supabase.table("dii_data").select("*").execute()
+    elif indices == "CLI":
+        response = supabase.table("cli_data").select("*").execute()
+    elif indices == "NET":
+        response = supabase.table("net_data").select("*").execute()
 
-    # 📘 Load Excel file
-    #excel_file = "p_data.xlsx"  # <-- replace with your actual Excel file name
-    # sheets = ["FII", "DII", "PRO", "CLI","NET"]
-
-    # df1 = data[0]
-    # st.text("FII_OPTION_DATA")
-    # st.bar_chart(df1.set_index('DATE'))
-    # df2 = data[1]
-    # st.text("PRO_OPTION_DATA")
-    # st.bar_chart(df2.set_index('DATE'))
-    # df3 = data[2]
-    # st.text("NET_OPTION_DATA")
-    # st.bar_chart(df3.set_index('DATE'))
-    # df4 = data[3]
-    # st.text("DII_OPTION_DATA")
-    # st.bar_chart(df4.set_index('DATE'))
-    # df5 = data[4]
-    # st.text("CLI_OPTION_DATA")
-    # st.bar_chart(df5.set_index('DATE'))
-    data = save_pdata.read_data()
+    df = pd.DataFrame(response.data)
+    # df['buy_t'] = pd.to_datetime(df['buy_t']).dt.strftime('%Y-%m-%d %H:%M')
+    # df['sell_t'] = pd.to_datetime(df['sell_t']).dt.strftime('%Y-%m-%d %H:%M')
+    return df
+def view_data(ans):
     st.title("📊 Option Data Dashboard")
+    df = get_data(ans)
 
     # Color mapping
-    color_map = {"CALL": "green", "PUT": "red", "NET": "blue"}
+    color_map = {"CALL": "green", "PUT": "red", "NET": "blue","FII_NET":"yellow","PRO_NET":"black"}
 
     # Robust chart plotting function
     def plot_chart(df, title):
@@ -135,7 +161,7 @@ def view_data():
         fig = go.Figure()
 
         # Plot each of CALL / PUT / NET if it exists
-        for key in ["CALL", "PUT", "NET"]:
+        for key in ["CALL", "PUT", "NET","FII_NET","PRO_NET"]:
             # Match columns ending with key (handles prefixes)
             matching_cols = [c for c in df.columns if c.upper().endswith(key)]
             for col in matching_cols:
@@ -167,8 +193,8 @@ def view_data():
         st.plotly_chart(fig, use_container_width=True)
 
     # Display charts
-    plot_chart(data[0], "📘 FII OPTION DATA")
-    plot_chart(data[1], "📗 PRO OPTION DATA")
-    plot_chart(data[2], "📙 NET OPTION DATA")  # Only DATE + NET will be plotted
-    plot_chart(data[3], "📕 DII OPTION DATA")
-    plot_chart(data[4], "📒 CLIENT OPTION DATA")
+    plot_chart(df, "📘 OPTION DATA")
+    # plot_chart(data[1], "📗 PRO OPTION DATA")
+    # plot_chart(data[2], "📙 NET OPTION DATA")  # Only DATE + NET will be plotted
+    # plot_chart(data[3], "📕 DII OPTION DATA")
+    # plot_chart(data[4], "📒 CLIENT OPTION DATA")
