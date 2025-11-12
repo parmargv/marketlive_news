@@ -1,12 +1,12 @@
 import datetime
-import streamlit as st
 import urllib
-import supabase
 import save_pdata
 import pytz
-import plotly.graph_objects as go
 from supabase import create_client, Client
+import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+import numpy as np   # ← add this line
 def fetch_data():
     user_id = st.text_input('Enter userId:')
     user_pw = st.text_input('Enter password:')
@@ -146,55 +146,49 @@ def view_data(ans):
     st.title("📊 Option Data Dashboard")
     df = get_data(ans)
 
-    # Color mapping
-    color_map = {"CALL": "green", "PUT": "red", "NET": "blue","FII_NET":"yellow","PRO_NET":"black"}
+    # Dropdown to select which data to view
+    selection = st.selectbox("Select Data Type", ["CALL", "PUT", "NET"])
 
-    # Robust chart plotting function
-    def plot_chart(df, title):
+    # Color mapping
+    color_map = {"CALL": "green", "PUT": "red", "NET": "blue"}
+
+    def plot_chart(df, title, selection):
         df = df.copy()
 
-        # Convert all numeric columns (except DATE)
+        # Convert numeric columns
         for col in df.columns:
             if col != "DATE":
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
         fig = go.Figure()
 
-        # Plot each of CALL / PUT / NET if it exists
-        for key in ["CALL", "PUT", "NET","FII_NET","PRO_NET"]:
-            # Match columns ending with key (handles prefixes)
-            matching_cols = [c for c in df.columns if c.upper().endswith(key)]
-            for col in matching_cols:
-                fig.add_trace(go.Bar(
-                    x=df["DATE"],
-                    y=df[col],
-                    name=key,
-                    marker_color=color_map[key]
-                ))
+        # Plot only selected data (columns ending with selection)
+        matching_cols = [c for c in df.columns if c.upper().endswith(selection)]
+        for col in matching_cols:
+            fig.add_trace(go.Bar(
+                x=df["DATE"],
+                y=df[col],
+                name=selection,
+                marker_color=color_map[selection]
+            ))
 
-        # Layout
         fig.update_layout(
             title=title,
             xaxis_title="Date",
             yaxis_title="Value",
             barmode="group",
-            title_x=0.8,
+            title_x=0.5,
             plot_bgcolor="#f9f9f9",
             paper_bgcolor="#f9f9f9",
             font=dict(size=14),
             hovermode="x unified",
             legend=dict(title="Data Type", orientation="h", y=-0.2),
-            xaxis = dict(
-            tickfont=dict(size=14, family="Arial, sans-serif", color="black"),  # font size & color
-            # title_font=dict(size=14, family="Arial, sans-serif", color="black"),  # title font size
+            xaxis=dict(
+                tickfont=dict(size=14, family="Arial, sans-serif", color="black"),
             )
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display charts
-    plot_chart(df, "📘 OPTION DATA")
-    # plot_chart(data[1], "📗 PRO OPTION DATA")
-    # plot_chart(data[2], "📙 NET OPTION DATA")  # Only DATE + NET will be plotted
-    # plot_chart(data[3], "📕 DII OPTION DATA")
-    # plot_chart(data[4], "📒 CLIENT OPTION DATA")
+    # Display selected chart
+    plot_chart(df, f"📘 OPTION DATA - {selection}", selection)
