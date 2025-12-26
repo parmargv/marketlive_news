@@ -3,6 +3,7 @@ import bs4
 import pandas as pd
 from bs4 import BeautifulSoup as bs
 import streamlit as st
+import re
 def cash():
     url = "https://www.moneycontrol.com/stocks/marketstats/fii_dii_activity/index.php"
     headers = {}
@@ -28,6 +29,65 @@ def cash():
     # df3 = df3.astype({"FII_SELL": 'str'})
     # df3['FII_SELL']=pd.to_numeric(df3['FII_SELL'],downcast='signed')
     df = df3[2:]
+
+    df = df.copy()
+
+    # --- 1. Prevent accidentally summing an existing TOTAL row (if present) ---
+    date_col = df.columns[0]
+    df = df[df[date_col] != 'TOTAL'].copy()  # remove any previously appended TOTAL row
+
+    # --- 2. Keep an original-string column for debugging (optional) ---
+    if 'FII_NET_raw' not in df.columns:
+        df['FII_NET_raw'] = df['FII_NET'].astype(str)
+
+    if 'DII_NET_raw' not in df.columns:
+        df['DII_NET_raw'] = df['DII_NET'].astype(str)
+
+    # --- 3. Clean strings: remove commas, spaces; convert (123) -> -123; strip currency symbols etc. ---
+    def clean_money(s):
+        if pd.isna(s):
+            return s
+        s = str(s).strip()
+        if s == '':
+            return None
+        # Handle parentheses indicating negative values: (1,234.5) -> -1234.5
+        if re.match(r'^\(.*\)$', s):
+            s = '-' + s.strip('()')
+        # Remove commas and any currency symbols/letters except - and . and digits
+        s = re.sub(r'[^\d\.\-]', '', s)
+        # There can be multiple dots or multiple minus signs -> leave to numeric coercion
+        return s
+
+    df.loc[:, 'FII_NET_clean'] = df['FII_NET_raw'].apply(clean_money)
+    df.loc[:, 'DII_NET_clean'] = df['DII_NET_raw'].apply(clean_money)
+    # --- 4. Convert to numeric safely ---
+    df.loc[:, 'FII_NET'] = pd.to_numeric(df['FII_NET_clean'], errors='coerce')
+    df.loc[:, 'DII_NET'] = pd.to_numeric(df['DII_NET_clean'], errors='coerce')
+    # --- 5. Report conversion issues so you can inspect what's wrong ---
+    bad = df[df['FII_NET'].isna() & df['FII_NET_raw'].notna()]
+    if not bad.empty:
+        print("Rows that failed numeric conversion (inspect these):")
+        print(bad[['FII_NET_raw', 'FII_NET_clean']].head(20))
+    else:
+        print("All values converted to numeric successfully.")
+
+    # --- 6. Compute the total correctly (ignores NaN) ---
+
+    total_fii = int(df['FII_NET'].sum(skipna=True))
+    total_dii = int(df['DII_NET'].sum(skipna=True))
+    st.write("TOTAL_FII",total_fii)
+    st.write("TOTAL_DII", total_dii)
+
+    # --- 7. (Optional) Append TOTAL row safely: put label in date column only ---
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    # build total row dict: keep same columns order
+    df[date_col] = df[date_col].astype(str)
+    total_row = {col: None for col in df.columns}
+    total_row[date_col] = 'TOTAL'
+    for col in numeric_cols:
+        total_row[col] = df[col].sum()
+
+    #df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     # df = df.reset_index()
     # df.sort_index(axis=0,ascending=False)
     return (df)
