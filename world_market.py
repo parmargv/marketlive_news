@@ -65,11 +65,11 @@ def cash():
     df.loc[:, 'DII_NET'] = pd.to_numeric(df['DII_NET_clean'], errors='coerce')
     # --- 5. Report conversion issues so you can inspect what's wrong ---
     bad = df[df['FII_NET'].isna() & df['FII_NET_raw'].notna()]
-    if not bad.empty:
-        print("Rows that failed numeric conversion (inspect these):")
-        print(bad[['FII_NET_raw', 'FII_NET_clean']].head(20))
-    else:
-        print("All values converted to numeric successfully.")
+    # if not bad.empty:
+    #     print("Rows that failed numeric conversion (inspect these):")
+    #     print(bad[['FII_NET_raw', 'FII_NET_clean']].head(20))
+    # else:
+    #     print("All values converted to numeric successfully.")
 
     # --- 6. Compute the total correctly (ignores NaN) ---
 
