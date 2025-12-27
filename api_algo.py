@@ -57,24 +57,26 @@ def main():
                         # Rich text display
                         st.markdown(
                             f"""
-                <div style="
-                    background-color:#f8f9fa;
-                    padding:10px 15px;
-                    margin-bottom:8px;
-                    border-radius:10px;
-                    border-left:5px solid #2E86C1;
-                    font-size:16px;">
-                    <b>{i}. {headline}</b>
-                </div>
-                                    """,
+                            <div style="
+                                background-color:#f8f9fa;
+                                padding:10px 15px;
+                                margin-bottom:8px;
+                                border-radius:10px;
+                                border-left:5px solid #2E86C1;
+                                font-size:16px;
+                            ">
+                                <span style="color:#E64D27; font-weight:bold;">
+                                    {i}. {headline}
+                                </span>
+                            </div>
+                            """,
                             unsafe_allow_html=True
                         )
-            else:
-                st.warning("⚠️ No news items found in the container.")
+                    else:
+                        st.warning("⚠️ No news items found in the container.")
         else:
             st.error("❌ 'FirstFoldWidget_scrollContainer__Ilb4S' section not found.")
         st.balloons()
-        st.snow()
         #st.title("Welcome to my algo trading application...")
     if choice=="News":
         News.get_data()
