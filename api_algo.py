@@ -9,6 +9,7 @@ from datetime import date
 import working_day
 import requests
 from bs4 import BeautifulSoup
+import oi_data
 
 
 def main():
@@ -22,7 +23,7 @@ def main():
 
     #st.markdown(f'<marquee behavior="scroll" direction="left">Current_Time:{formatted_time},Today:-{today_name},Login_state:-{login_state},User_Name:{user_name}</marquee>', unsafe_allow_html=True)
 
-    activity = ['Home','News','Gainer_Looser_future','World_market','FII_data','Participant_data','View_Particpant _Data']
+    activity = ['Home','News','Gainer_Looser_future','World_market','OI_DATA','FII_data','Participant_data','View_Particpant _Data']
     choice = st.sidebar.selectbox("Main Menu", activity)
 
     if choice=="Home":
@@ -80,6 +81,9 @@ def main():
         #st.title("Welcome to my algo trading application...")
     if choice=="News":
         News.get_data()
+
+    if choice =="OI_DATA":
+        oi_data.plot_chart()
 
     if choice == "Gainer_Looser_future":
         st_autorefresh(interval=60 * 1000, key="dataframerefresh")

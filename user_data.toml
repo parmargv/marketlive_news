@@ -1,0 +1,25 @@
+[gvparmar]
+user="gvparmar"
+account="B.G.PARMAR"
+password="Gvp@123"
+app_id = "72Z5W7UKXD-100"
+secret_key = "L73SIVHRS9"
+redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
+response_type = "code"
+state = "sample_state"
+totp_key = "ZNQ32YUGLUSCSB3VYHYE2UMY4N7ZZDKP"
+username = "FB0696"
+pin =9753
+
+[bgparmar]
+user="bgparmar"
+account="G.V.PARMAR"
+password="Gvp@123"
+app_id = "MNSEP7UKMN-100"
+secret_key = "PTDDCST9F7"
+redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
+response_type = "code"
+state = "sample_state"
+totp_key = "ZNQ32YUGLUSCSB3VYHYE2UMY4N7ZZDKP"
+username = "FB0696"
+pin =9753
