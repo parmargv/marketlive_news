@@ -25,7 +25,6 @@ absolute_path = os.path.dirname(__file__)
 
 
 def quate(token,sym):
-    # fyers = Login()
     data = {"symbols":sym}
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     response = fyers.quotes(data=data)
@@ -35,7 +34,6 @@ def quate(token,sym):
     prev_close = data['prev_close_price']
     ch = round(last_price - prev_close,2)
     return last_price,ch,ch_per
-
 
 def live_data(token,symbol):
     data = {"symbols": symbol}
@@ -134,7 +132,6 @@ def buy_order(token, sym, qnt, buyat):
     id = str(response.get("id"))
     return code, message, id, st
 
-
 def buy_order_m(token, sym, qnt):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     data = {
@@ -159,7 +156,6 @@ def buy_order_m(token, sym, qnt):
     id = str(response.get("id"))
     return code, message, id, st
 
-
 def sell_order(token, sym, qnt, sellat):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     data = {
@@ -183,7 +179,6 @@ def sell_order(token, sym, qnt, sellat):
     message = response.get("message")
     id = str(response.get("id"))
     return code, message, id, st
-
 
 def basket_order(token, sym1, sym2, qnt):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
@@ -221,7 +216,6 @@ def basket_order(token, sym1, sym2, qnt):
     response = fyers.place_basket_orders(data=data)
     return response
 
-
 def exit_one(token, id):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     data = {"id": id}
@@ -231,7 +225,6 @@ def exit_one(token, id):
     message = response.get("message")
     id = str(response.get("id"))
     return code, message, id, st
-
 
 def exit_two(token, id1, id2):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)

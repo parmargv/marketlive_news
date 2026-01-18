@@ -191,74 +191,108 @@ def plot_chart():
     time.sleep(10)
 
 def plot_pcr():
-    token = supabase_read.get_token()
+    token = get_token()
     data = fetch_oi(token, "NSE:NIFTY50-INDEX")
+
     df = data[0]
     c_oi = data[1]
     p_oi = data[2]
 
-    if "pcr_df" not in st.session_state:
-        st.session_state.pcr_df = pd.DataFrame(
-            columns=["timestamp", "net_ce_oi", "net_pe_oi", "pcr"]
-        )
+    supabase_read.save_pcr_to_supabase(c_oi,p_oi,"NIFTY")
+    df = supabase_read.fetch_pcr_from_supabase(symbol="NIFTY",limit=120)
 
-    def store_pcr(net_ce_oi, net_pe_oi):
-        timestamp = datetime.now().replace(second=0, microsecond=0)
+    if df.empty:
+        st.warning("No PCR data available yet")
+        return
 
-        pcr = net_pe_oi / net_ce_oi if net_ce_oi != 0 else np.nan
+        # SMA
+    df["pcr_sma_10"] = df["pcr"].rolling(10, min_periods=1).mean()
 
-        new_row = {
-            "timestamp": timestamp,
-            "net_ce_oi": net_ce_oi,
-            "net_pe_oi": net_pe_oi,
-            "pcr": pcr
-        }
+    # Plot
+    # fig, ax = plt.subplots(figsize=(12, 8))
+    #
+    # ax.plot(df["timestamp"], df["pcr"], linewidth=2, label="PCR")
+    # ax.plot(df["timestamp"], df["pcr_sma_10"], "--", linewidth=2, label="PCR SMA(10)")
+    #
+    # ax.axhline(1, linestyle=":", alpha=0.6)
+    #
+    # ax.set_title("NIFTY PCR vs Time (Supabase)")
+    # ax.set_xlabel("Time")
+    # ax.set_ylabel("PCR")
+    #
+    # ax.grid(alpha=0.3)
+    # ax.legend()
+    #
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    #
+    # st.pyplot(fig)
+    #
+    # CRORE = 1e7
+    # fig2, ax2 = plt.subplots(figsize=(12, 8))
+    #
+    # ax2.plot(
+    #     df["timestamp"],
+    #     df["net_ce_oi"] / CRORE,
+    #     linewidth=3,
+    #     label="TOTAL CALL OI"
+    # )
+    #
+    # ax2.plot(
+    #     df["timestamp"],
+    #     df["net_pe_oi"] / CRORE,
+    #     linewidth=3,
+    #     label="TOTAL PUT OI"
+    # )
+    #
+    # ax2.set_title("NIFTY TOTAL CALL vs PUT OI")
+    # ax2.set_xlabel("Time")
+    # ax2.set_ylabel("Open Interest (Cr)")
+    #
+    # ax2.grid(alpha=0.3)
+    # ax2.legend()
+    #
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # st.pyplot(fig2)
 
-        st.session_state.pcr_df = pd.concat(
-            [st.session_state.pcr_df, pd.DataFrame([new_row])],
-            ignore_index=True
-        )
+    CRORE = 1e7
 
-    store_pcr(c_oi, p_oi)
-
-    st.session_state.pcr_df["pcr_sma_10"] = (
-        st.session_state.pcr_df["pcr"]
-        .rolling(window=10, min_periods=1)
-        .mean()
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2,
+        figsize=(10, 8),  # ⬅ very wide figure
+        sharex=True
     )
+    # =======================
+    # LEFT: PCR
+    # =======================
+    ax1.plot(df["timestamp"], df["pcr"], linewidth=2, label="PCR")
+    ax1.plot(df["timestamp"], df["pcr_sma_10"], "--", linewidth=2, label="PCR SMA(10)")
+    ax1.axhline(1, linestyle=":", alpha=0.6)
 
-    df_plot = st.session_state.pcr_df
+    ax1.set_title("NIFTY PCR vs Time")
+    ax1.set_ylabel("PCR")
+    ax1.grid(alpha=0.3)
+    ax1.legend()
 
-    fig, ax = plt.subplots(figsize=(10, 4))
+    # =======================
+    # RIGHT: TOTAL OI
+    # =======================
+    ax2.plot(df["timestamp"], df["net_ce_oi"] / CRORE, linewidth=2.5, label="Total CE OI (Cr)")
+    ax2.plot(df["timestamp"], df["net_pe_oi"] / CRORE, linewidth=2.5, label="Total PE OI (Cr)")
 
-    # PCR line
-    ax.plot(
-        df_plot["timestamp"],
-        df_plot["pcr"],
-        linewidth=2,
-        label="PCR"
-    )
+    ax2.set_title("NIFTY Total Call vs Put OI")
+    ax2.set_ylabel("Open Interest (Cr)")
+    ax2.grid(alpha=0.3)
+    ax2.legend()
 
-    # SMA(10) line
-    ax.plot(
-        df_plot["timestamp"],
-        df_plot["pcr_sma_10"],
-        linestyle="--",
-        linewidth=2,
-        label="PCR SMA(10)"
-    )
+    # =======================
+    # X-axis formatting
+    # =======================
+    for ax in (ax1, ax2):
+        ax.tick_params(axis="x", rotation=45)
 
-    # Reference line
-    ax.axhline(1, linestyle=":", alpha=0.6)
-
-    ax.set_title("PCR vs Time (1-Min) with SMA(10)")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("PCR")
-
-    ax.grid(alpha=0.3)
-    ax.legend()
-
-    plt.xticks(rotation=45)
     plt.tight_layout()
 
-    st.pyplot(fig)
+    # ⬅ THIS IS IMPORTANT
+    st.pyplot(fig, use_container_width=True)
