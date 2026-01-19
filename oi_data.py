@@ -4,11 +4,12 @@ import pytz
 import trade_all
 from datetime import datetime
 import os
-import matplotlib.pyplot as plt
 import numpy as np
 from streamlit_autorefresh import st_autorefresh
 import time
 import supabase_read
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 # ================= CONFIG =================
 TOKEN_FILE = "token.txt"
@@ -199,7 +200,7 @@ def plot_pcr():
     p_oi = data[2]
 
     supabase_read.save_pcr_to_supabase(c_oi,p_oi,"NIFTY")
-    df = supabase_read.fetch_pcr_from_supabase(symbol="NIFTY",limit=120)
+    df = supabase_read.fetch_pcr_from_supabase(symbol="NIFTY",limit=190)
 
     if df.empty:
         st.warning("No PCR data available yet")
@@ -256,43 +257,126 @@ def plot_pcr():
     # plt.tight_layout()
     # st.pyplot(fig2)
 
-    CRORE = 1e7
+    CRORE = 1e7  # 1 Crore = 10,000,000
 
+    # -----------------------
+    # DATA PREPARATION
+    # -----------------------
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp").dropna()
+
+    # Market time limits
+    market_date = df["timestamp"].dt.normalize().iloc[0]
+    market_start = market_date + pd.Timedelta(hours=9, minutes=15)
+    market_end = market_date + pd.Timedelta(hours=15, minutes=30)
+
+    # Last values
+    last_row = df.iloc[-1]
+    last_time = last_row["timestamp"]
+    last_pcr = last_row["pcr"]
+    last_ce = last_row["net_ce_oi"] / CRORE
+    last_pe = last_row["net_pe_oi"] / CRORE
+
+    # -----------------------
+    # FIGURE SETUP
+    # -----------------------
     fig, (ax1, ax2) = plt.subplots(
-        1, 2,
-        figsize=(10, 8),  # ⬅ very wide figure
+        2, 1,
+        figsize=(14, 8),
         sharex=True
     )
-    # =======================
-    # LEFT: PCR
-    # =======================
+
+    # -----------------------
+    # TOP CHART: PCR
+    # -----------------------
     ax1.plot(df["timestamp"], df["pcr"], linewidth=2, label="PCR")
     ax1.plot(df["timestamp"], df["pcr_sma_10"], "--", linewidth=2, label="PCR SMA(10)")
     ax1.axhline(1, linestyle=":", alpha=0.6)
+
+    # Last PCR marker
+    ax1.scatter(last_time, last_pcr, zorder=5)
+    ax1.annotate(
+        f"{last_pcr:.2f}",
+        (last_time, last_pcr),
+        textcoords="offset points",
+        xytext=(0, 8),
+        ha="center",
+        fontsize=10,
+        fontweight="bold"
+    )
+
+    ax1.text(
+        0.99, 0.95,
+        f"Last PCR: {last_pcr:.2f}\nTime: {last_time.strftime('%H:%M')}",
+        transform=ax1.transAxes,
+        ha="right",
+        va="top",
+        fontsize=10,
+        bbox=dict(boxstyle="round", alpha=0.3)
+    )
 
     ax1.set_title("NIFTY PCR vs Time")
     ax1.set_ylabel("PCR")
     ax1.grid(alpha=0.3)
     ax1.legend()
 
-    # =======================
-    # RIGHT: TOTAL OI
-    # =======================
+    # -----------------------
+    # BOTTOM CHART: TOTAL OI
+    # -----------------------
     ax2.plot(df["timestamp"], df["net_ce_oi"] / CRORE, linewidth=2.5, label="Total CE OI (Cr)")
     ax2.plot(df["timestamp"], df["net_pe_oi"] / CRORE, linewidth=2.5, label="Total PE OI (Cr)")
+
+    # Last OI markers
+    ax2.scatter(last_time, last_ce, zorder=5)
+    ax2.scatter(last_time, last_pe, zorder=5)
+
+    ax2.annotate(
+        f"CE: {last_ce:.2f} Cr",
+        (last_time, last_ce),
+        textcoords="offset points",
+        xytext=(0, 8),
+        ha="center",
+        fontsize=9,
+        fontweight="bold"
+    )
+
+    ax2.annotate(
+        f"PE: {last_pe:.2f} Cr",
+        (last_time, last_pe),
+        textcoords="offset points",
+        xytext=(0, -12),
+        ha="center",
+        fontsize=9,
+        fontweight="bold"
+    )
 
     ax2.set_title("NIFTY Total Call vs Put OI")
     ax2.set_ylabel("Open Interest (Cr)")
     ax2.grid(alpha=0.3)
     ax2.legend()
 
-    # =======================
-    # X-axis formatting
-    # =======================
+    # -----------------------
+    # X-AXIS: FIXED 5-MIN
+    # -----------------------
+    locator = mdates.MinuteLocator(interval=5)
+    formatter = mdates.DateFormatter("%H:%M")
+
     for ax in (ax1, ax2):
-        ax.tick_params(axis="x", rotation=45)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+        ax.set_xlim(market_start, market_end)
+
+    # Vertical labels only on bottom chart
+    plt.setp(
+        ax2.xaxis.get_majorticklabels(),
+        rotation=90,
+        ha="center",
+        va="top"
+    )
 
     plt.tight_layout()
 
-    # ⬅ THIS IS IMPORTANT
+    # -----------------------
+    # STREAMLIT RENDER
+    # -----------------------
     st.pyplot(fig, use_container_width=True)
