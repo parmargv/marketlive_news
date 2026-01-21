@@ -10,6 +10,9 @@ import time
 import supabase_read
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import get_signal
+from zoneinfo import ZoneInfo
+IST = ZoneInfo("Asia/Kolkata")
 
 # ================= CONFIG =================
 TOKEN_FILE = "token.txt"
@@ -194,10 +197,14 @@ def plot_chart():
 def plot_pcr():
     token = get_token()
     data = fetch_oi(token, "NSE:NIFTY50-INDEX")
-
-    df = data[0]
     c_oi = data[1]
     p_oi = data[2]
+    s1 = data[3]
+    s2 = data[4]
+    r1 = data[5]
+    r2 = data[6]
+    ce_oi_ch = data[8]
+    pe_oi_ch = data[9]
 
     supabase_read.save_pcr_to_supabase(c_oi,p_oi,"NIFTY")
     df = supabase_read.fetch_pcr_from_supabase(symbol="NIFTY",limit=190)
@@ -207,55 +214,32 @@ def plot_pcr():
         return
 
         # SMA
-    df["pcr_sma_10"] = df["pcr"].rolling(10, min_periods=1).mean()
+    df["pcr_sma_10"] = df["pcr"].rolling(15, min_periods=1).mean()
+    df = get_signal.get_sig(df)
 
-    # Plot
-    # fig, ax = plt.subplots(figsize=(12, 8))
-    #
-    # ax.plot(df["timestamp"], df["pcr"], linewidth=2, label="PCR")
-    # ax.plot(df["timestamp"], df["pcr_sma_10"], "--", linewidth=2, label="PCR SMA(10)")
-    #
-    # ax.axhline(1, linestyle=":", alpha=0.6)
-    #
-    # ax.set_title("NIFTY PCR vs Time (Supabase)")
-    # ax.set_xlabel("Time")
-    # ax.set_ylabel("PCR")
-    #
-    # ax.grid(alpha=0.3)
-    # ax.legend()
-    #
-    # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    #
-    # st.pyplot(fig)
-    #
-    # CRORE = 1e7
-    # fig2, ax2 = plt.subplots(figsize=(12, 8))
-    #
-    # ax2.plot(
-    #     df["timestamp"],
-    #     df["net_ce_oi"] / CRORE,
-    #     linewidth=3,
-    #     label="TOTAL CALL OI"
-    # )
-    #
-    # ax2.plot(
-    #     df["timestamp"],
-    #     df["net_pe_oi"] / CRORE,
-    #     linewidth=3,
-    #     label="TOTAL PUT OI"
-    # )
-    #
-    # ax2.set_title("NIFTY TOTAL CALL vs PUT OI")
-    # ax2.set_xlabel("Time")
-    # ax2.set_ylabel("Open Interest (Cr)")
-    #
-    # ax2.grid(alpha=0.3)
-    # ax2.legend()
-    #
-    # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    # st.pyplot(fig2)
+    today = datetime.today()
+    fixed_time = today.replace(hour=9, minute=20, second=0, microsecond=0)
+    f_time = fixed_time.strftime("%Y-%m-%d %H:%M")
+    df_b = df[(df['pcr_sig'] == "BUY") & (df['timestamp'] > f_time)]
+    df_s = df[(df['pcr_sig'] == "SELL") & (df['timestamp'] > f_time)]
+    f_df = pd.concat([df_b, df_s], axis=0)
+    s_df = f_df.sort_values(by='timestamp', ascending=True, ignore_index=True)
+    sig = s_df['pcr_sig'].iloc[-1]
+    sig_t = s_df['timestamp'].iloc[-1]
+
+    col1, col2, col3, col4,col5,col6 = st.columns(6)
+    with col1:
+        st.write("R1", r1)
+    with col2:
+        st.write("R2", r2)
+    with col3:
+        st.write("S1", s1)
+    with col4:
+        st.write("S2", s2)
+    with col5:
+        st.write("SIG:", sig)
+    with col6:
+        st.write("SIG TIME", sig_t)
 
     CRORE = 1e7  # 1 Crore = 10,000,000
 
@@ -264,6 +248,7 @@ def plot_pcr():
     # -----------------------
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp").dropna()
+
 
     # Market time limits
     market_date = df["timestamp"].dt.normalize().iloc[0]
@@ -380,3 +365,129 @@ def plot_pcr():
     # STREAMLIT RENDER
     # -----------------------
     st.pyplot(fig, use_container_width=True)
+
+    df = data[0]
+    # ------------------ FIGURE ------------------
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2,
+        figsize=(12, 4),
+        gridspec_kw={'width_ratios': [3, 1]}  # left wide, right compact
+    )
+
+    # =====================================================================
+    # CHART 1 (LEFT): STRIKE-WISE OI
+    # =====================================================================
+    x_labels = df["strike_price"].astype(str)
+    x = np.arange(len(x_labels))
+    width = 0.45
+
+    ax1.bar(x - width / 2, df["CE_OI"] / CRORE, width, color="red", label="CE OI")
+    ax1.bar(x + width / 2, df["PE_OI"] / CRORE, width, color="green", label="PE OI")
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(x_labels, rotation=90)
+    ax1.set_ylabel("Open Interest (Cr)")
+    ax1.set_title("Strike-wise OI")
+    ax1.legend()
+    ax1.grid(axis="y", alpha=0.3)
+
+    # =====================================================================
+    # CHART 2 (RIGHT): NET CE vs NET PE OI
+    # =====================================================================
+    labels = ["Net CE OI", "Net PE OI"]
+    values = [c_oi / CRORE, p_oi / CRORE]
+
+    x2 = np.arange(len(labels))
+    bar_width = 0.4
+
+    ax2.bar(x2[0], values[0], bar_width, color="red", label="Net CE OI")
+    ax2.bar(x2[1], values[1], bar_width, color="green", label="Net PE OI")
+
+    y_max = max(values) * 1.2
+    ax2.set_ylim(0, y_max)
+
+    ax2.set_xticks(x2)
+    ax2.set_xticklabels(labels)
+    ax2.set_ylabel("OI (Cr)")
+    ax2.set_title("Net OI", fontsize=10)
+    ax2.grid(axis="y", alpha=0.3)
+
+    # Value labels
+    for i, v in enumerate(values):
+        ax2.text(i, v + y_max * 0.02, f"{v:.2f}", ha="center", fontsize=9)
+
+    # ------------------ FINAL ------------------
+    plt.tight_layout()
+    st.pyplot(fig)
+    # =========================
+    # Chart 2: OI Change
+    # =========================
+
+
+    # ------------------ FIGURE ------------------
+    fig1, (ax3, ax4) = plt.subplots(
+        1, 2,
+        figsize=(12, 4),
+        gridspec_kw={'width_ratios': [3, 1]}  # left wide, right compact
+    )
+
+    # =====================================================================
+    # CHART 1 (LEFT): STRIKE-WISE OI
+    # =====================================================================
+    x_labels = df["strike_price"].astype(str)
+    x = np.arange(len(x_labels))
+    width = 0.45
+
+    ax3.bar(x - width / 2, df["CE_OI_CH"] / CRORE, width, color="red", label="CE OI CH")
+    ax3.bar(x + width / 2, df["PE_OI_CH"] / CRORE, width, color="green", label="PE OI CH")
+
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(x_labels, rotation=90)
+    ax3.set_ylabel("Change in Open Interest (Cr)")
+    ax3.set_title("Strike-wise OI change")
+    ax3.legend()
+    ax3.grid(axis="y", alpha=0.3)
+
+    # =====================================================================
+    # CHART 2 (RIGHT): NET CE vs NET PE OI
+    # =====================================================================
+    labels = ["Net CE OI change ", "Net PE OI change "]
+    values = [ce_oi_ch / CRORE, pe_oi_ch / CRORE]
+
+    x2 = np.arange(len(labels))
+    bar_width = 0.4
+
+    ax4.bar(x2[0], values[0], bar_width, color="red", label="Net CE OI")
+    ax4.bar(x2[1], values[1], bar_width, color="green", label="Net PE OI")
+
+    y_max = max(values) * 1.2
+    ax2.set_ylim(0, y_max)
+
+    ax4.set_xticks(x2)
+    ax4.set_xticklabels(labels)
+    ax4.set_ylabel("OI (Cr)")
+    ax4.set_title("Net OI", fontsize=10)
+    ax4.grid(axis="y", alpha=0.3)
+
+    # Value labels
+    for i, v in enumerate(values):
+        ax4.text(i, v + y_max * 0.02, f"{v:.2f}", ha="center", fontsize=9)
+
+    # ------------------ FINAL ------------------
+    plt.tight_layout()
+    st.pyplot(fig1)
+
+    fig3, ax5 = plt.subplots(figsize=(12, 4))
+
+    ax5.bar(x - width / 2, df["OI_DIFF"] / CRORE, width, color="blue", label="PE-CE OI diff")
+    # ax2.bar(x + width / 2, df["PE_OI_CH"] / CRORE, width, color="green", label="PE OI Change")
+
+    ax5.axhline(0, linewidth=1)
+    ax5.set_xticks(x)
+    ax5.set_xticklabels(x_labels, rotation=90)
+    ax5.set_ylabel("OI DIFF (Cr)")
+    ax5.set_title("OI differance ")
+    ax5.legend()
+    ax5.grid(axis="y", alpha=0.3)
+    st.pyplot(fig3)
+    time.sleep(10)
