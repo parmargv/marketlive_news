@@ -61,8 +61,8 @@ def o_chain(token,sym):
         "timestamp": ""
     }
     res = fyers.optionchain(data=data);
-    # c_oi = res['data']['callOi']
-    # p_oi = res['data']['putOi']
+    c_oi = res['data']['callOi']
+    p_oi = res['data']['putOi']
     data = res['data']['optionsChain']
     strike_data = {}
 
@@ -95,8 +95,8 @@ def o_chain(token,sym):
     df['OI_DIFF'] = df['PE_OI'] - df['CE_OI']
     df['OI_CH_DIFF']=df['PE_OI_CH']-df['CE_OI_CH']
 
-    ce_oi = df['CE_OI'].sum()
-    pe_oi = df['PE_OI'].sum()
+    # ce_oi = df['CE_OI'].sum()
+    # pe_oi = df['PE_OI'].sum()
     ce_oi_ch = df['CE_OI_CH'].sum()
     pe_oi_ch = df['PE_OI_CH'].sum()
 
@@ -112,8 +112,8 @@ def o_chain(token,sym):
     s2 = df['strike_price'].iloc[-2]
     oi_s2 = round((df['PE_OI'].iloc[-2]) / 10000000,2)
     df = df.sort_values('strike_price').reset_index(drop=True)
-    pcr = pe_oi / ce_oi
-    return df,ce_oi,pe_oi,s1,s2,r1,r2,pcr,ce_oi_ch,pe_oi_ch
+    pcr = p_oi / c_oi
+    return df,c_oi,p_oi,s1,s2,r1,r2,pcr,ce_oi_ch,pe_oi_ch
 def buy_order(token, sym, qnt, buyat):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     data = {

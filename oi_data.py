@@ -224,8 +224,12 @@ def plot_pcr():
     df_s = df[(df['pcr_sig'] == "SELL") & (df['timestamp'] > f_time)]
     f_df = pd.concat([df_b, df_s], axis=0)
     s_df = f_df.sort_values(by='timestamp', ascending=True, ignore_index=True)
-    sig = s_df['pcr_sig'].iloc[-1]
-    sig_t = s_df['timestamp'].iloc[-1]
+    if len(s_df)>0:
+        sig = s_df['pcr_sig'].iloc[-1]
+        sig_t = s_df['timestamp'].iloc[-1]
+    else:
+        sig = "NO"
+        sig_t= ""
 
     col1, col2, col3, col4,col5,col6 = st.columns(6)
     with col1:
@@ -239,7 +243,7 @@ def plot_pcr():
     with col5:
         st.write("SIG:", sig)
     with col6:
-        st.write("SIG TIME", sig_t)
+        st.write("SIG_T:", sig_t)
 
     CRORE = 1e7  # 1 Crore = 10,000,000
 
