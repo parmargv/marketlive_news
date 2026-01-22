@@ -20,9 +20,7 @@ def authenticate_user(users):
 data = authenticate_user(users)
 u_name = data[0]
 app_id = data[1]
-
 absolute_path = os.path.dirname(__file__)
-
 
 def quate(token,sym):
     data = {"symbols":sym}

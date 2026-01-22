@@ -7,7 +7,7 @@ import toml
 import datetime as dt
 import os
 def get_sig(data):
-    data['main_s'] = numpy.where(((data['pcr'] > data['pcr_sma_10'])), "Y", "N")
+    data['main_s'] = numpy.where(((data['pcr_sma_3'] > data['pcr_sma_15'])), "Y", "N")
     conditions = [
         ((data['main_s'] == "Y") & (data['main_s'].shift(+1) == "N")),
         ((data['main_s'] == "N") & (data['main_s'].shift(+1) == "Y"))

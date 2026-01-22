@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import pandas_ta as ta
 import pytz
 import trade_all
 from datetime import datetime
@@ -214,17 +215,18 @@ def plot_pcr():
         return
 
         # SMA
-    df["pcr_sma_10"] = df["pcr"].rolling(15, min_periods=1).mean()
+    df["pcr_sma_15"] = df["pcr"].rolling(15, min_periods=1).mean()
+    df["pcr_sma_3"] = df["pcr"].rolling(3, min_periods=1).mean()
     df = get_signal.get_sig(df)
 
     today = datetime.today()
     fixed_time = today.replace(hour=9, minute=20, second=0, microsecond=0)
     f_time = fixed_time.strftime("%Y-%m-%d %H:%M")
-    df_b = df[(df['pcr_sig'] == "BUY") & (df['timestamp'] > f_time)]
-    df_s = df[(df['pcr_sig'] == "SELL") & (df['timestamp'] > f_time)]
+    df_b = df[(df['pcr_sig'] == "BUY")]
+    df_s = df[(df['pcr_sig'] == "SELL")]
     f_df = pd.concat([df_b, df_s], axis=0)
     s_df = f_df.sort_values(by='timestamp', ascending=True, ignore_index=True)
-    if len(s_df)>0:
+    if len(s_df) > 0:
         sig = s_df['pcr_sig'].iloc[-1]
         sig_t = s_df['timestamp'].iloc[-1]
     else:
@@ -278,8 +280,9 @@ def plot_pcr():
     # -----------------------
     # TOP CHART: PCR
     # -----------------------
-    ax1.plot(df["timestamp"], df["pcr"], linewidth=2, label="PCR")
-    ax1.plot(df["timestamp"], df["pcr_sma_10"], "--", linewidth=2, label="PCR SMA(10)")
+    #ax1.plot(df["timestamp"], df["pcr"], linewidth=1, label="PCR")
+    ax1.plot(df["timestamp"], df["pcr_sma_15"], "--", linewidth=2, label="PCR SMA(15)")
+    ax1.plot(df["timestamp"], df["pcr_sma_3"], linewidth=2, label="PCR SMA(3)")
     ax1.axhline(1, linestyle=":", alpha=0.6)
 
     # Last PCR marker
