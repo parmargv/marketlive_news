@@ -30,8 +30,9 @@ def quate(token,sym):
     ch_per = data['chp']
     last_price = data['lp']
     prev_close = data['prev_close_price']
+    open_price = data['open_price']
     ch = round(last_price - prev_close,2)
-    return last_price,ch,ch_per
+    return last_price,ch,ch_per,open_price
 
 def live_data(token,symbol):
     data = {"symbols": symbol}
@@ -51,11 +52,11 @@ def live_data(token,symbol):
     open_gap =round(((open - p_c)/p_c)*100,2)
     return open_gap,ch_p,ch,high,ltp,low,p_c
 
-def o_chain(token,sym):
+def o_chain(token,sym,o_price):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, is_async=False, log_path=absolute_path)
     data = {
         "symbol": sym,
-        "strikecount": 8,
+        "strikecount": 10,
         "timestamp": ""
     }
     res = fyers.optionchain(data=data);
@@ -95,23 +96,23 @@ def o_chain(token,sym):
 
     # ce_oi = df['CE_OI'].sum()
     # pe_oi = df['PE_OI'].sum()
+
+
+    df = df.sort_values('strike_price').reset_index(drop=True)
+    df_h = df[df['strike_price'] >= o_price]
+    df_1 = df_h.head(9)
+    df_l = df[df['strike_price'] < o_price]
+    df_2 = df_l.tail(7)
+    df = pd.concat([df_1, df_2], axis=0)
+    df = df.sort_values('strike_price').reset_index(drop=True)
+    ce_oi = df['CE_OI'].sum()
+    pe_oi = df['PE_OI'].sum()
     ce_oi_ch = df['CE_OI_CH'].sum()
     pe_oi_ch = df['PE_OI_CH'].sum()
-
-
     df = df.sort_values('CE_OI').reset_index(drop=True)
-    r1 = df['strike_price'].iloc[-1]
-    oi_r1 = round((df['CE_OI'].iloc[-1]) / 10000000, 2)
-    r2 = df['strike_price'].iloc[-2]
-    oi_r2 = round((df['CE_OI'].iloc[-2]) / 10000000, 2)
-    df = df.sort_values('PE_OI').reset_index(drop=True)
-    s1 = df['strike_price'].iloc[-1]
-    oi_s1 = round((df['PE_OI'].iloc[-1]) / 10000000,2)
-    s2 = df['strike_price'].iloc[-2]
-    oi_s2 = round((df['PE_OI'].iloc[-2]) / 10000000,2)
     df = df.sort_values('strike_price').reset_index(drop=True)
     pcr = p_oi / c_oi
-    return df,c_oi,p_oi,s1,s2,r1,r2,pcr,ce_oi_ch,pe_oi_ch
+    return df,c_oi,p_oi,pcr,ce_oi_ch,pe_oi_ch,ce_oi,pe_oi
 def buy_order(token, sym, qnt, buyat):
     fyers = fyersModel.FyersModel(client_id=app_id, token=token, log_path=absolute_path)
     data = {

@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import pandas_ta as ta
 import pytz
 import trade_all
 from datetime import datetime
@@ -30,8 +29,8 @@ def get_token():
     return token
 
 
-def fetch_oi(token, symbol):
-    data = trade_all.o_chain(token, symbol)
+def fetch_oi(token, symbol,open_price):
+    data = trade_all.o_chain(token, symbol,open_price)
     return data
     # return pd.DataFrame({
     #     "OI_DIFF": [data["OI_DIFF"].iloc[2]]
@@ -87,7 +86,7 @@ def save_data(df):
 def plot_chart():
     st_autorefresh(interval=60 * 1000, key="dataframe refresh_5")
     token = get_token()
-    data = fetch_oi(token, "NSE:NIFTY50-INDEX")
+    data = fetch_oi(token, "NSE:NIFTY50-INDEX",25300)
 
     df = data[0]
     c_oi = data[1]
@@ -197,26 +196,36 @@ def plot_chart():
 
 def plot_pcr():
     token = get_token()
-    data = fetch_oi(token, "NSE:NIFTY50-INDEX")
+    q_data = trade_all.quate(token, "NSE:NIFTY50-INDEX")
+    ltp = q_data[0]
+    ch = q_data[1]
+    ch_per = q_data[2]
+    open = q_data[3]
+    open_price = round(open / 50) * 50
+
+    data = supabase_read.read_pre_data()
+    pr_ce_oi = data["pre_ce_oi"]
+    pr_pe_oi = data["pre_pe_oi"]
+
+    data = fetch_oi(token, "NSE:NIFTY50-INDEX",open_price)
     c_oi = data[1]
     p_oi = data[2]
-    s1 = data[3]
-    s2 = data[4]
-    r1 = data[5]
-    r2 = data[6]
-    ce_oi_ch = data[8]
-    pe_oi_ch = data[9]
+    pcr = data[3]
+    ce_oi = data[6]
+    pe_oi = data[7]
+    ce_oi_ch = ce_oi - pr_ce_oi
+    pe_oi_ch = pe_oi - pr_pe_oi
 
-    supabase_read.save_pcr_to_supabase(c_oi,p_oi,"NIFTY")
+
+    supabase_read.save_pcr_to_supabase(ce_oi,pe_oi,"NIFTY")
     df = supabase_read.fetch_pcr_from_supabase(symbol="NIFTY",limit=190)
 
     if df.empty:
         st.warning("No PCR data available yet")
         return
 
-        # SMA
-    df["pcr_sma_15"] = df["pcr"].rolling(15, min_periods=1).mean()
-    df["pcr_sma_3"] = df["pcr"].rolling(3, min_periods=1).mean()
+    df["pcr_sma_15"] = df["pcr"].rolling(20, min_periods=1).mean()
+    df["pcr_sma_3"] = df["pcr"].rolling(1, min_periods=1).mean()
     df = get_signal.get_sig(df)
 
     today = datetime.today()
@@ -235,13 +244,13 @@ def plot_pcr():
 
     col1, col2, col3, col4,col5,col6 = st.columns(6)
     with col1:
-        st.write("R1", r1)
+        st.write("LTP", ltp)
     with col2:
-        st.write("R2", r2)
+        st.write("CH", ch)
     with col3:
-        st.write("S1", s1)
+        st.write("CH_PER", ch_per)
     with col4:
-        st.write("S2", s2)
+        st.write("OPEN", open)
     with col5:
         st.write("SIG:", sig)
     with col6:
@@ -254,7 +263,6 @@ def plot_pcr():
     # -----------------------
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp").dropna()
-
 
     # Market time limits
     market_date = df["timestamp"].dt.normalize().iloc[0]
@@ -280,9 +288,9 @@ def plot_pcr():
     # -----------------------
     # TOP CHART: PCR
     # -----------------------
-    #ax1.plot(df["timestamp"], df["pcr"], linewidth=1, label="PCR")
+    ax1.plot(df["timestamp"], df["pcr"], linewidth=1, label="PCR")
     ax1.plot(df["timestamp"], df["pcr_sma_15"], "--", linewidth=2, label="PCR SMA(15)")
-    ax1.plot(df["timestamp"], df["pcr_sma_3"], linewidth=2, label="PCR SMA(3)")
+    #ax1.plot(df["timestamp"], df["pcr_sma_3"], linewidth=2, label="PCR SMA(3)")
     ax1.axhline(1, linestyle=":", alpha=0.6)
 
     # Last PCR marker
@@ -402,7 +410,7 @@ def plot_pcr():
     # CHART 2 (RIGHT): NET CE vs NET PE OI
     # =====================================================================
     labels = ["Net CE OI", "Net PE OI"]
-    values = [c_oi / CRORE, p_oi / CRORE]
+    values = [ce_oi / CRORE, pe_oi / CRORE]
 
     x2 = np.arange(len(labels))
     bar_width = 0.4
@@ -497,4 +505,3 @@ def plot_pcr():
     ax5.legend()
     ax5.grid(axis="y", alpha=0.3)
     st.pyplot(fig3)
-    time.sleep(10)

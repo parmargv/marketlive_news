@@ -84,3 +84,21 @@ def fetch_pcr_from_supabase(symbol="NIFTY", limit=120):
     df["timestamp"] = df["timestamp"].dt.tz_localize(None)
     df["pcr"] = df["pcr"].astype(float)
     return df
+def update_pre_data(ce_oi,pe_oi):
+    response = supabase.table("p_data") \
+        .update({
+        "pre_ce_oi": ce_oi,
+        "pre_pe_oi": pe_oi
+    }) \
+        .eq("id", 1) \
+        .execute()
+
+def read_pre_data():
+    response = supabase.table("p_data") \
+        .select("*") \
+        .execute()
+    data = response.data[0]
+    return data
+
+
+

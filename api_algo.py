@@ -21,6 +21,19 @@ def plot_graph():
     st_time = time(15, 30)
     if now >= st_time:
         main()
+def save_pre_data():
+    st.write("Saving previous day data....")
+    df = supabase_read.fetch_pcr_from_supabase("NIFTY",limit=120)
+    ce_oi = int(df['net_ce_oi'].iloc[0])
+    pe_oi = int(df['net_pe_oi'].iloc[0])
+    supabase_read.update_pre_data(ce_oi,pe_oi)
+    india = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(india).time()
+    st_time = time(9, 10)
+    if now >= st_time:
+        main()
+
+
 def clear_data():
     st_autorefresh(interval=60 * 1000, key="dataframerefresh")
     st.write("PCR DATA CLEARED....")
@@ -144,19 +157,23 @@ def off_market():
         if option2 == "Y":
             participant_data.view_data(ans)
 
-
 def main():
     today = date.today()
     to_day = working_day.is_working_day(today)
     india = pytz.timezone("Asia/Kolkata")
     now = datetime.now(india).time()
+    save_pcr = time(9, 5)
     clear_pcr = time(9, 10)
     market_start = time(9, 15)
     market_end = time(15, 30)
 
-    if market_start > now >= clear_pcr:
+    if clear_pcr > now >= save_pcr:
+       pre_data = save_pre_data()
+       pre_ce_oi = pre_data[0]
+       pre_pe_oi = pre_data[1]
+    elif clear_pcr > now >= market_start:
         clear_data()
-    elif today and market_start <= now <= market_end:
+    elif today == True and market_start <= now <= market_end:
         plot_graph()
     else:
         off_market()
