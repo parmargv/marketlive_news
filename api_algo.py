@@ -29,7 +29,7 @@ def save_pre_data():
     supabase_read.update_pre_data(ce_oi,pe_oi)
     india = pytz.timezone("Asia/Kolkata")
     now = datetime.now(india).time()
-    st_time = time(9, 10)
+    st_time = time(9, 12)
     if now >= st_time:
         main()
 
@@ -162,18 +162,16 @@ def main():
     to_day = working_day.is_working_day(today)
     india = pytz.timezone("Asia/Kolkata")
     now = datetime.now(india).time()
-    save_pcr = time(9, 5)
-    clear_pcr = time(9, 10)
+    save_pcr = time(9, 10)
+    clear_pcr = time(9, 12)
     market_start = time(9, 15)
     market_end = time(15, 30)
 
     if clear_pcr > now >= save_pcr:
-       pre_data = save_pre_data()
-       pre_ce_oi = pre_data[0]
-       pre_pe_oi = pre_data[1]
-    elif clear_pcr > now >= market_start:
+       save_pre_data()
+    elif market_start > now >= clear_pcr:
         clear_data()
-    elif today == True and market_start <= now <= market_end:
+    elif market_start <= now <= market_end:
         plot_graph()
     else:
         off_market()
