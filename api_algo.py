@@ -23,6 +23,7 @@ def plot_graph():
         main()
 def save_pre_data():
     st.write("Saving previous day data....")
+    st_autorefresh(interval=60 * 1000, key="dataframerefresh")
     df = supabase_read.fetch_pcr_from_supabase("NIFTY",limit=120)
     ce_oi = int(df['net_ce_oi'].iloc[0])
     pe_oi = int(df['net_pe_oi'].iloc[0])
