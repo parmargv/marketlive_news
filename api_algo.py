@@ -159,6 +159,7 @@ def off_market():
             participant_data.view_data(ans)
 
 def main():
+    st.set_page_config(page_title=None, page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items=None)
     today = date.today()
     to_day = working_day.is_working_day(today)
     india = pytz.timezone("Asia/Kolkata")
