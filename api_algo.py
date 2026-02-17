@@ -46,7 +46,7 @@ def clear_data():
         main()
 
 def off_market():
-    st.set_page_config(page_title=None, page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items=None)
+    #st.set_page_config(page_title=None, page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items=None)
     india_timezone = pytz.timezone('Asia/Kolkata')
     now = datetime.now(india_timezone).time()
     today = date.today()
@@ -57,7 +57,6 @@ def off_market():
     choice = st.sidebar.selectbox("Main Menu", activity)
 
     if choice == "Home":
-
         st_autorefresh(interval=30 * 1000, key="dataframerefresh")
         st.markdown(f'<h1 style="color:#319AA2 ;font-size:25px;">Welcome to live market news and data.....</h1>',unsafe_allow_html=True)
         st.title("📰 Economic Times - Just Now Market News")
